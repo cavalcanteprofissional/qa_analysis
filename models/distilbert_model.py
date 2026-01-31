@@ -27,8 +27,10 @@ class DistilBERTModel(BaseQAModel):
         """Carrega o modelo DistilBERT"""
         print(f"⚙️ Carregando modelo DistilBERT...")
         
-        # Login no Hugging Face
-        login(token=Config.HF_TOKEN)
+        # Login no Hugging Face (obter token de ambiente)
+        hf_token = Config.HF_TOKEN
+        if hf_token:
+            login(token=hf_token)
         
         # Usar pipeline do transformers
         self.model = pipeline(
