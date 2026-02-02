@@ -1,10 +1,24 @@
-# QA Pipeline
+# QA Pipeline - Question Answering Modular & Paralelo
 
-Implementação modular de pipeline de Question Answering com execução paralela.
+**[Versão em Português →](README_PT.md)**
 
-## Data Flow Architecture
+Uma pipeline robusta, modular e paralela para processar e analisar respostas de múltiplos modelos de Question Answering (QA) usando a plataforma Hugging Face.
 
-The QA pipeline implements a **7-stage processing flow** with parallel model execution and comprehensive analysis:
+## Tabela de Conteúdos
+
+- [Características](#-characteristics)
+- [Arquitetura](#-architecture)
+- [Fluxo de Dados](#-data-flow)
+- [Modelos](#-models)
+- [Métricas](#-metrics)
+- [Instalação](#-setup)
+- [Uso](#-usage)
+- [Exemplos](#-examples)
+- [Saídas](#-outputs)
+
+---
+
+## ✨ Características
 
 ### 🔄 Pipeline Overview
 
@@ -139,6 +153,8 @@ See `pyproject.toml` for dependencies. Use Poetry to install:
 poetry install
 poetry run python -m src.main --shards all --models all
 ```
+
+```bash
 qa-pipeline/
 ├── src/
 │   ├── base_model.py           # Classe base abstrata para modelos
@@ -187,3 +203,4 @@ outputs/
     │   └── comparative_analysis.csv
     └── config/
         └── pipeline_config_used.yaml
+```

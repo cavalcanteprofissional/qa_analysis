@@ -1,0 +1,22 @@
+{
+  "overall": {
+    "total_predictions": 5,
+    "avg_overlap_fraction": 0.0,
+    "avg_overlap_count": 0.0
+  },
+  "per_model": {
+    "distilbert": {
+      "count": 5,
+      "mean_score": 0.0,
+      "median_score": 0.0,
+      "avg_overlap_fraction": 0.0,
+      "avg_overlap_count": 0.0
+    }
+  },
+  "comparative": {
+    "avg_unique_answers": 1.0
+  },
+  "categorical": {
+    "high_risk": 5
+  }
+}

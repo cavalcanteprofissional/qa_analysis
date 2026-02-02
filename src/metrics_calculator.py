@@ -1,4 +1,4 @@
-"""Cálculo de métricas e geração de relatórios simples com overlap."""
+"""Cálculo de métricas e geração de relatórios com overlap palavra-resposta-contexto."""
 from typing import Dict, Any
 from pathlib import Path
 import pandas as pd
@@ -6,12 +6,35 @@ import json
 
 
 class MetricsCalculator:
+    @staticmethod
+    def _compute_word_overlap(answer_str: str, context_str: str) -> tuple:
+        """Calcula overlap de palavras entre resposta e contexto.
+        
+        Retorna (overlap_count, overlap_fraction) onde:
+        - overlap_count: número de palavras da resposta que aparecem no contexto
+        - overlap_fraction: overlap_count / total de palavras na resposta (0 se resposta vazia)
+        """
+        if pd.isna(answer_str) or pd.isna(context_str):
+            return 0, 0.0
+        
+        # normaliza strings
+        answer_words = set(str(answer_str).lower().split())
+        context_words = set(str(context_str).lower().split())
+        
+        if not answer_words:
+            return 0, 0.0
+        
+        overlap_count = len(answer_words & context_words)
+        overlap_fraction = overlap_count / len(answer_words)
+        
+        return overlap_count, overlap_fraction
+    
     def annotate_overlap(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Annotate DataFrame with overlap_count and overlap_fraction per row.
+        """Anota DataFrame com overlap de palavras (resposta vs contexto) por linha.
 
-        overlap_count: number of models that returned the identical answer for the same question+context.
-        overlap_fraction: overlap_count / number_of_models_for_that_question_context
-        Missing answers (NaN) are treated as no-answer and receive overlap_count 0.
+        overlap_count: número de palavras da resposta que aparecem no contexto.
+        overlap_fraction: overlap_count / total de palavras na resposta (0 se resposta vazia).
+        Respostas faltantes (NaN) recebem overlap_count 0 e overlap_fraction 0.0.
         """
         if df.empty:
             return df.copy()
@@ -19,25 +42,22 @@ class MetricsCalculator:
         df = df.copy()
         if "answer" not in df.columns:
             df["answer"] = pd.NA
+        if "context" not in df.columns:
+            return df
 
-        # mark missing answers
-        missing_mask = df["answer"].isna()
-
-        sentinel = "__MISSING__"
-        ans_filled = df["answer"].fillna(sentinel).astype(str)
-
-        helper = df.assign(_ans=ans_filled)
-        counts = helper.groupby(["question", "context", "_ans"]).size().rename("ans_count").reset_index()
-
-        merged = helper.merge(counts, on=["question", "context", "_ans"], how="left")
-
-        n_models = merged.groupby(["question", "context"])["model"].transform("count")
-
-        merged["overlap_count"] = merged["ans_count"].where(~missing_mask, 0).fillna(0).astype(int)
-        merged["overlap_fraction"] = (merged["overlap_count"] / n_models).fillna(0.0).astype(float)
-
-        merged = merged.drop(columns=["_ans", "ans_count"])
-        return merged
+        # calcula overlap palavra-a-palavra para cada linha
+        overlaps = df.apply(
+            lambda row: pd.Series(
+                self._compute_word_overlap(row.get("answer"), row.get("context")),
+                index=["overlap_count", "overlap_fraction"]
+            ),
+            axis=1
+        )
+        
+        df["overlap_count"] = overlaps["overlap_count"].astype(int)
+        df["overlap_fraction"] = overlaps["overlap_fraction"].astype(float)
+        
+        return df
 
     def calculate_all_metrics(self, df_results: pd.DataFrame) -> Dict[str, Any]:
         # ensure overlap annotation present

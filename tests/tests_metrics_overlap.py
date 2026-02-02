@@ -5,49 +5,55 @@ import pandas as pd
 from src.metrics_calculator import MetricsCalculator
 
 
-def test_annotate_overlap_basic():
+def test_annotate_overlap_word_level():
+    """Testa overlap palabra-a-palabra entre resposta e contexto."""
     df = pd.DataFrame([
-        {"question": "q1", "context": "c1", "model": "m1", "answer": "A", "score": 0.9},
-        {"question": "q1", "context": "c1", "model": "m2", "answer": "A", "score": 0.8},
-        {"question": "q1", "context": "c1", "model": "m3", "answer": "B", "score": 0.7},
-        {"question": "q2", "context": "c2", "model": "m1", "answer": None, "score": 0.6},
-        {"question": "q2", "context": "c2", "model": "m2", "answer": "C", "score": 0.5},
+        {"question": "q1", "context": "the cat sat on the mat", "model": "m1", "answer": "cat sat", "score": 0.9},
+        {"question": "q1", "context": "the dog ran fast", "model": "m2", "answer": "dog", "score": 0.8},
+        {"question": "q2", "context": "hello world test", "model": "m1", "answer": None, "score": 0.6},
     ])
     mc = MetricsCalculator()
     annotated = mc.annotate_overlap(df)
-    # for q1/c1: answers A appear twice -> overlap_count 2, fraction 2/3
-    row_m1 = annotated[(annotated.model == "m1") & (annotated.question == "q1")].iloc[0]
-    assert int(row_m1.overlap_count) == 2
-    assert abs(float(row_m1.overlap_fraction) - (2/3)) < 1e-6
-    # for missing answer row overlap_count should be 0
-    missing_row = annotated[(annotated.question == "q2") & (annotated.model == "m1")].iloc[0]
-    assert int(missing_row.overlap_count) == 0
-    assert float(missing_row.overlap_fraction) == 0.0
+    
+    # resposta 'cat sat' tem 2 palavras, ambas no contexto -> overlap 2/2 = 1.0
+    row1 = annotated[annotated.model == "m1"].iloc[0]
+    assert int(row1.overlap_count) == 2
+    assert abs(float(row1.overlap_fraction) - 1.0) < 1e-6
+    
+    # resposta 'dog' tem 1 palavra, está no contexto -> overlap 1/1 = 1.0
+    row2 = annotated[annotated.model == "m2"].iloc[0]
+    assert int(row2.overlap_count) == 1
+    assert abs(float(row2.overlap_fraction) - 1.0) < 1e-6
+    
+    # resposta faltante -> overlap 0
+    row3 = annotated[(annotated.question == "q2") & (annotated.model == "m1")].iloc[0]
+    assert int(row3.overlap_count) == 0
+    assert float(row3.overlap_fraction) == 0.0
 
 
-def test_per_model_metrics_include_overlap():
+def test_partial_word_overlap():
+    """Testa overlap parcial (nem todas as palavras da resposta no contexto)."""
     df = pd.DataFrame([
-        {"question": "q", "context": "c", "model": "m1", "answer": "X", "score": 0.9},
-        {"question": "q", "context": "c", "model": "m2", "answer": "X", "score": 0.8},
-        {"question": "q", "context": "c", "model": "m3", "answer": "Y", "score": 0.7},
+        {"question": "q", "context": "the quick brown fox", "model": "m1", "answer": "brown dog", "score": 0.9},
     ])
     mc = MetricsCalculator()
-    metrics = mc.calculate_all_metrics(df)
-    per = metrics["per_model"]
-    # m1 and m2 should have avg_overlap_fraction 2/3, m3 should have 1/3
-    assert abs(per["m1"]["avg_overlap_fraction"] - (2/3)) < 1e-6
-    assert abs(per["m3"]["avg_overlap_fraction"] - (1/3)) < 1e-6
+    annotated = mc.annotate_overlap(df)
+    
+    # resposta 'brown dog' tem 2 palavras, apenas 'brown' no contexto -> overlap 1/2 = 0.5
+    row = annotated.iloc[0]
+    assert int(row.overlap_count) == 1
+    assert abs(float(row.overlap_fraction) - 0.5) < 1e-6
 
 
-def test_overall_metrics_include_overlap():
+def test_no_word_overlap():
+    """Testa quando nenhuma palavra da resposta está no contexto."""
     df = pd.DataFrame([
-        {"question": "q", "context": "c", "model": "m1", "answer": "A", "score": 0.9},
-        {"question": "q", "context": "c", "model": "m2", "answer": "A", "score": 0.8},
-        {"question": "q", "context": "c", "model": "m3", "answer": "B", "score": 0.7},
+        {"question": "q", "context": "the cat sat", "model": "m1", "answer": "dog bird", "score": 0.9},
     ])
     mc = MetricsCalculator()
-    metrics = mc.calculate_all_metrics(df)
-    overall = metrics["overall"]
-    # overlap fractions are [2/3, 2/3, 1/3] -> mean = (2/3+2/3+1/3)/3 = 7/9 ~ 0.777...
-    expected = (2/3 + 2/3 + 1/3) / 3
-    assert abs(overall["avg_overlap_fraction"] - expected) < 1e-6
+    annotated = mc.annotate_overlap(df)
+    
+    # nenhuma palavra de 'dog bird' no contexto -> overlap 0/2 = 0.0
+    row = annotated.iloc[0]
+    assert int(row.overlap_count) == 0
+    assert float(row.overlap_fraction) == 0.0
