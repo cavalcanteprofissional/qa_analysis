@@ -92,11 +92,27 @@ class PipelineController:
 
         df_results = pd.DataFrame(all_rows)
 
-        # annotate overlaps before saving consolidated CSV
+        # annotate overlaps and add lengths before saving
         try:
             df_results = self.metrics.annotate_overlap(df_results)
         except Exception:
             self.logger.warning("Could not annotate overlap on results; continuing without overlap")
+            if "overlap" not in df_results.columns:
+                df_results["overlap"] = 0.0
+            if "context_length" not in df_results.columns:
+                df_results["context_length"] = df_results["context"].fillna("").apply(len)
+            if "question_length" not in df_results.columns:
+                df_results["question_length"] = df_results["question"].fillna("").apply(len)
+
+        # Garantir coluna 'error' existe
+        if "error" not in df_results.columns:
+            df_results["error"] = ""
+
+        # Manter apenas colunas necessárias na ordem correta
+        required_cols = ["_id", "title", "context", "question", "_shard", "context_length", 
+                        "question_length", "model", "answer", "score", "overlap", "error"]
+        available_cols = [col for col in required_cols if col in df_results.columns]
+        df_results = df_results[available_cols]
 
         # save consolidated CSV
         csv_path = out_dir / "results_consolidated.csv"

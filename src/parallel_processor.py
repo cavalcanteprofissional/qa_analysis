@@ -32,18 +32,21 @@ def _process_model_worker(hf_name: str, df_rows: List[Dict[str, str]], batch_siz
     total = len(df_rows)
     for i in range(0, total, batch_size):
         batch = df_rows[i : i + batch_size]
-        inputs = [{"question": r["question"], "context": r["context"]} for r in batch]
-        try:
-            res = pipe(inputs)
-            # normalize single result
-            if isinstance(res, dict):
-                res = [res]
-        except Exception as e:
-            res = [{"answer": "", "score": 0.0, "error": str(e)} for _ in inputs]
-
-        # attach shard and original index
-        for orig, out in zip(batch, res):
-            results.append({**orig, **out})
+        for row in batch:
+            try:
+                res = pipe(question=row["question"], context=row["context"])
+            except Exception as e:
+                res = {"answer": "", "score": 0.0, "error": str(e)}
+            
+            # Garantir que tem as chaves esperadas
+            if "answer" not in res:
+                res["answer"] = ""
+            if "score" not in res:
+                res["score"] = 0.0
+            if "error" not in res:
+                res["error"] = ""
+            
+            results.append({**row, **res})
 
     return results
 

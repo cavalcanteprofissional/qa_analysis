@@ -17,18 +17,15 @@ def test_annotate_overlap_word_level():
     
     # resposta 'cat sat' tem 2 palavras, ambas no contexto -> overlap 2/2 = 1.0
     row1 = annotated[annotated.model == "m1"].iloc[0]
-    assert int(row1.overlap_count) == 2
-    assert abs(float(row1.overlap_fraction) - 1.0) < 1e-6
+    assert abs(float(row1.overlap) - 1.0) < 1e-6
     
     # resposta 'dog' tem 1 palavra, está no contexto -> overlap 1/1 = 1.0
     row2 = annotated[annotated.model == "m2"].iloc[0]
-    assert int(row2.overlap_count) == 1
-    assert abs(float(row2.overlap_fraction) - 1.0) < 1e-6
+    assert abs(float(row2.overlap) - 1.0) < 1e-6
     
     # resposta faltante -> overlap 0
     row3 = annotated[(annotated.question == "q2") & (annotated.model == "m1")].iloc[0]
-    assert int(row3.overlap_count) == 0
-    assert float(row3.overlap_fraction) == 0.0
+    assert float(row3.overlap) == 0.0
 
 
 def test_partial_word_overlap():
@@ -41,8 +38,7 @@ def test_partial_word_overlap():
     
     # resposta 'brown dog' tem 2 palavras, apenas 'brown' no contexto -> overlap 1/2 = 0.5
     row = annotated.iloc[0]
-    assert int(row.overlap_count) == 1
-    assert abs(float(row.overlap_fraction) - 0.5) < 1e-6
+    assert abs(float(row.overlap) - 0.5) < 1e-6
 
 
 def test_no_word_overlap():
@@ -55,5 +51,4 @@ def test_no_word_overlap():
     
     # nenhuma palavra de 'dog bird' no contexto -> overlap 0/2 = 0.0
     row = annotated.iloc[0]
-    assert int(row.overlap_count) == 0
-    assert float(row.overlap_fraction) == 0.0
+    assert float(row.overlap) == 0.0

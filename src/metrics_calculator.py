@@ -7,34 +7,32 @@ import json
 
 class MetricsCalculator:
     @staticmethod
-    def _compute_word_overlap(answer_str: str, context_str: str) -> tuple:
+    def _compute_word_overlap(answer_str: str, context_str: str) -> float:
         """Calcula overlap de palavras entre resposta e contexto.
         
-        Retorna (overlap_count, overlap_fraction) onde:
-        - overlap_count: número de palavras da resposta que aparecem no contexto
-        - overlap_fraction: overlap_count / total de palavras na resposta (0 se resposta vazia)
+        Retorna overlap_fraction: número de palavras da resposta que aparecem no contexto
+        dividido pelo total de palavras na resposta (0.0 se resposta vazia ou nula).
         """
         if pd.isna(answer_str) or pd.isna(context_str):
-            return 0, 0.0
+            return 0.0
         
         # normaliza strings
         answer_words = set(str(answer_str).lower().split())
         context_words = set(str(context_str).lower().split())
         
         if not answer_words:
-            return 0, 0.0
+            return 0.0
         
         overlap_count = len(answer_words & context_words)
         overlap_fraction = overlap_count / len(answer_words)
         
-        return overlap_count, overlap_fraction
+        return float(overlap_fraction)
     
     def annotate_overlap(self, df: pd.DataFrame) -> pd.DataFrame:
         """Anota DataFrame com overlap de palavras (resposta vs contexto) por linha.
 
-        overlap_count: número de palavras da resposta que aparecem no contexto.
-        overlap_fraction: overlap_count / total de palavras na resposta (0 se resposta vazia).
-        Respostas faltantes (NaN) recebem overlap_count 0 e overlap_fraction 0.0.
+        Adiciona colunas: overlap (float 0.0-1.0), context_length (caracteres), question_length (caracteres).
+        Respostas faltantes (NaN) recebem overlap 0.0.
         """
         if df.empty:
             return df.copy()
@@ -43,25 +41,25 @@ class MetricsCalculator:
         if "answer" not in df.columns:
             df["answer"] = pd.NA
         if "context" not in df.columns:
-            return df
+            df["context"] = ""
+        if "question" not in df.columns:
+            df["question"] = ""
 
-        # calcula overlap palavra-a-palavra para cada linha
-        overlaps = df.apply(
-            lambda row: pd.Series(
-                self._compute_word_overlap(row.get("answer"), row.get("context")),
-                index=["overlap_count", "overlap_fraction"]
-            ),
+        # Calcula overlap palavra-a-palavra para cada linha
+        df["overlap"] = df.apply(
+            lambda row: self._compute_word_overlap(row.get("answer"), row.get("context")),
             axis=1
-        )
+        ).astype(float)
         
-        df["overlap_count"] = overlaps["overlap_count"].astype(int)
-        df["overlap_fraction"] = overlaps["overlap_fraction"].astype(float)
+        # Calcula comprimentos por CARACTERE (não por palavra)
+        df["context_length"] = df["context"].fillna("").apply(lambda x: len(str(x))).astype(int)
+        df["question_length"] = df["question"].fillna("").apply(lambda x: len(str(x))).astype(int)
         
         return df
 
+
     def calculate_all_metrics(self, df_results: pd.DataFrame) -> Dict[str, Any]:
-        # ensure overlap annotation present
-        df_with_overlap = self.annotate_overlap(df_results) if "overlap_count" not in df_results.columns else df_results.copy()
+        df_with_overlap = self.annotate_overlap(df_results) if "overlap" not in df_results.columns else df_results.copy()
 
         metrics = {
             "overall": self._calculate_overall_metrics(df_with_overlap),
@@ -73,22 +71,19 @@ class MetricsCalculator:
 
     def _calculate_overall_metrics(self, df: pd.DataFrame) -> Dict[str, Any]:
         total = len(df)
-        avg_overlap_fraction = float(df["overlap_fraction"].mean()) if "overlap_fraction" in df.columns and len(df) > 0 else 0.0
-        avg_overlap_count = float(df["overlap_count"].mean()) if "overlap_count" in df.columns and len(df) > 0 else 0.0
-        return {"total_predictions": int(total), "avg_overlap_fraction": avg_overlap_fraction, "avg_overlap_count": avg_overlap_count}
+        avg_overlap = float(df["overlap"].mean()) if "overlap" in df.columns and len(df) > 0 else 0.0
+        return {"total_predictions": int(total), "avg_overlap": avg_overlap}
 
     def _calculate_per_model_metrics(self, df: pd.DataFrame) -> Dict[str, Any]:
         out = {}
         for model, g in df.groupby("model"):
             scores = g["score"].dropna().astype(float)
-            avg_overlap_fraction = float(g["overlap_fraction"].mean()) if "overlap_fraction" in g.columns and len(g) > 0 else 0.0
-            avg_overlap_count = float(g["overlap_count"].mean()) if "overlap_count" in g.columns and len(g) > 0 else 0.0
+            avg_overlap = float(g["overlap"].mean()) if "overlap" in g.columns and len(g) > 0 else 0.0
             out[model] = {
                 "count": int(len(g)),
                 "mean_score": float(scores.mean()) if not scores.empty else None,
                 "median_score": float(scores.median()) if not scores.empty else None,
-                "avg_overlap_fraction": avg_overlap_fraction,
-                "avg_overlap_count": avg_overlap_count,
+                "avg_overlap": avg_overlap,
             }
         return out
 
