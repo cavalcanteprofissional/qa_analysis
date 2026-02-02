@@ -1,0 +1,37 @@
+default:
+  shards: ["all"]
+  models: ["all"]
+  batch_size: 32
+  workers: 4
+  output_dir: "outputs"
+  log_dir: "logs"
+
+# Example custom run
+example_run:
+  shards: ["shard_001.csv", "shard_002.csv"]
+  models: ["distilbert", "roberta"]
+  batch_size: 64
+  workers: 8
+# config/pipeline_config.yaml
+pipeline:
+  default_shards_dir: "data/shards"
+  default_output_dir: "outputs"
+  default_log_dir: "logs"
+  parallel_processing:
+    enabled: true
+    max_workers: 4
+    batch_size: 32
+  models:
+    available:
+      - distilbert
+      - roberta
+      - bert
+    default: ["distilbert", "roberta"]
+  metrics:
+    calculate_overlap: true
+    categorize_responses: true
+    generate_visualizations: true
+  export:
+    formats: ["csv", "json", "md"]
+    include_timestamp: true
+    compress_output: true
