@@ -2,53 +2,121 @@
 
 Implementação modular de pipeline de Question Answering com execução paralela.
 
-## Data Flow
+## Data Flow Architecture
 
-The pipeline follows a structured flow from input data to comprehensive analysis:
+The QA pipeline implements a **7-stage processing flow** with parallel model execution and comprehensive analysis:
+
+### 🔄 Pipeline Overview
 
 ```
-Input Data → Data Loading → Model Selection → Parallel Processing → Results Aggregation → Metrics Calculation → Output Storage
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   INPUT DATA    │───▶│ DATA LOADING    │───▶│ MODEL SELECTION │
+│                 │    │                 │    │                 │
+│ • CSV Shards   │    │ • Discovery     │    │ • Registry      │
+│ • CLI Args      │    │ • Validation    │    │ • Descriptors   │
+│ • YAML Config   │    │ • Mapping       │    │ • Device Alloc  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│PARALLEL PROCESSING│───▶│RESULTS AGGREGATION│───▶│METRICS CALCULATION│
+│                 │    │                 │    │                 │
+│ • Multi-Process │    │ • Collection    │    │ • Overlap       │
+│ • Batch Size    │    │ • Unification   │    │ • Performance   │
+│ • HF Pipelines  │    │ • Annotation    │    │ • Consensus     │
+│ • Error Handle  │    │ • Traceability   │    │ • Risk Analysis │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+                                                        ▼
+                                           ┌─────────────────┐
+                                           │ OUTPUT STORAGE  │
+                                           │                 │
+                                           │ • Timestamp Dir  │
+                                           │ • CSV Files     │
+                                           │ • JSON Data     │
+                                           │ • MD Reports    │
+                                           └─────────────────┘
 ```
 
-### 1. Input Stage
-- **Entry Point**: `src/main.py` - CLI interface
-- **Configuration**: Command-line args or `config/pipeline_config.yaml`
-- **Data Source**: CSV shards in `data/shards/` directory
+### 📋 Stage 1: Input & Configuration
+**Entry Point**: `src/main.py` (CLI Interface)
+- **Configuration Sources**:
+  - Command-line arguments (`--shards`, `--models`, `--batch-size`)
+  - YAML configuration (`config/pipeline_config.yaml`)
+  - Environment variables
+- **Data Sources**: CSV shards in `data/shards/` directory
+- **Validation**: Schema validation and format checking
 
-### 2. Data Loading (`src/data_loader.py`)
-- Discovers and loads CSV files with flexible selection
-- Supports columns: `question`/`context` or `query`/`text`
-- Adds traceability with `_shard` column
+### 📂 Stage 2: Data Loading (`src/data_loader.py`)
+**Flexible Data Ingestion**:
+- **Discovery**: Glob patterns for CSV file detection
+- **Schema Mapping**: Auto-detect column patterns
+  - `question`/`context` ↔ `query`/`text`
+- **Processing**: Concatenation with shard traceability
+- **Output**: Unified DataFrame with `_shard` column
 
-### 3. Model Selection (`src/model_selector.py`)
-- Available models: DistilBERT, RoBERTa, BERT
-- Dynamic instantiation via model descriptors
-- Automatic CUDA detection and device allocation
+### 🤖 Stage 3: Model Selection (`src/model_selector.py`)
+**Dynamic Model Registry**:
+- **Available Models**:
+  - `distilbert`: `distilbert-base-cased-distilled-squad`
+  - `roberta`: `deepset/roberta-base-squad2`  
+  - `bert`: `bert-large-uncased-whole-word-masking-finetuned-squad`
+- **Descriptors**: `{key, hf_name, device}` metadata
+- **Device Allocation**: Automatic CUDA/CPU detection
 
-### 4. Parallel Processing (`src/parallel_processor.py`)
-- ProcessPoolExecutor for true parallelism
-- Each model runs in isolated process
-- Batch processing with configurable sizes
-- Hugging Face pipeline integration
+### ⚡ Stage 4: Parallel Processing (`src/parallel_processor.py`)
+**High-Performance Execution**:
+- **Architecture**: ProcessPoolExecutor (true parallelism)
+- **Isolation**: Each model in separate process (no GIL conflicts)
+- **Batch Processing**: Configurable batch sizes
+- **Integration**: Hugging Face `pipeline("question-answering")`
+- **Error Recovery**: Fallback responses for failures
+- **Output Format**: `{answer, score, start, end}` per prediction
 
-### 5. Results Aggregation (`src/pipeline_controller.py`)
-- Collects results from all model processes
-- Adds model identification columns
-- Creates unified DataFrame with overlap annotations
+### 🔄 Stage 5: Results Aggregation (`src/pipeline_controller.py`)
+**Data Unification**:
+- **Collection**: Gather results from all model processes
+- **Enrichment**: Add `model` and processing metadata
+- **Consolidation**: Create unified DataFrame
+- **Overlap Analysis**: Model comparison annotations
+- **Traceability**: Shard and model lineage tracking
 
-### 6. Metrics Calculation (`src/metrics_calculator.py`)
-- **Overlap Analysis**: Count and fraction of identical answers
-- **Performance Metrics**: Score distributions, confidence intervals
-- **Comparative Analysis**: Cross-model consensus evaluation
-- **Risk Categorization**: Low/medium/high confidence classification
+### 📊 Stage 6: Metrics Calculation (`src/metrics_calculator.py`)
+**Comprehensive Analytics**:
 
-### 7. Output Storage
-- **Directory**: `outputs/YYYYMMDD_HHMMSS/`
-- **Files**:
+**Overlap Analysis**:
+- `overlap_count`: Number of identical answers per question
+- `overlap_fraction`: Consensus ratio across models
+
+**Performance Metrics**:
+- Score distributions (mean, median, std, percentiles)
+- Confidence intervals and error analysis
+- Model-specific performance statistics
+
+**Comparative Analysis**:
+- Cross-model consensus evaluation
+- Performance ranking and comparison
+- Answer similarity analysis
+
+**Risk Categorization**:
+- Low/Medium/High confidence based on scores
+- Uncertainty quantification
+- Decision support metrics
+
+### 💾 Stage 7: Output Storage (`outputs/YYYYMMDD_HHMMSS/`)
+**Structured Results**:
+- **Primary Data**:
   - `results_consolidated.csv`: All predictions with annotations
-  - `metrics.json`: Detailed metrics data
-  - `metrics_summary.md`: Human-readable report
-  - `per_model_metrics.csv`: Individual model statistics
+  - `per_model_metrics.csv`: Flattened model statistics
+  
+- **Analytics**:
+  - `metrics.json`: Complete metrics data structure
+  - `metrics_summary.md`: Human-readable analysis report
+  
+- **Traceability**:
+  - Timestamp directory organization
+  - Model configuration export
+  - Processing logs and error tracking
 
 ## Usage Examples
 
