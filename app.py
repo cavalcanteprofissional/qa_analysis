@@ -1,11 +1,35 @@
 import re
+import sys
 from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
+# Status flags for dependencies
+PLOTLY_AVAILABLE = False
+MATPLOTLIB_AVAILABLE = False
+
+# Try to import Plotly
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+    st.write("<!-- Plotly successfully imported -->")
+except ImportError:
+    st.write("<!-- Plotly not available -->")
+
+# Try to import Matplotlib/Seaborn
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Non-interactive backend for Streamlit
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    st.write("<!-- Matplotlib not available -->")
+
+# Try to import MetricsCalculator
 try:
     from src.metrics_calculator import MetricsCalculator
     _METRICS = MetricsCalculator()
@@ -14,6 +38,7 @@ except Exception:
 
 
 def find_latest_results_csv(outputs_dir: Path = Path("outputs")) -> Optional[Path]:
+    """Find the latest results_consolidated.csv file."""
     if not outputs_dir.exists():
         return None
 
@@ -44,11 +69,13 @@ def find_latest_results_csv(outputs_dir: Path = Path("outputs")) -> Optional[Pat
 
 @st.cache_data(show_spinner=False)
 def load_csv(path: Path) -> pd.DataFrame:
+    """Load CSV file with caching."""
     df = pd.read_csv(path)
     return df
 
 
 def map_columns(cols):
+    """Map column names to standard names."""
     mapping = {
         "query": ["question", "query", "prompt"],
         "answer": ["answer", "prediction", "generated_answer"],
@@ -68,6 +95,7 @@ def map_columns(cols):
 
 
 def compute_word_overlap(answer: str, context: str) -> float:
+    """Compute word overlap between answer and context."""
     if not answer or pd.isna(answer):
         return 0.0
     aw = set(str(answer).lower().split())
@@ -77,26 +105,136 @@ def compute_word_overlap(answer: str, context: str) -> float:
     return float(len(aw & cw) / len(aw))
 
 
+def create_fallback_visualization():
+    """Show fallback message when visualization libraries are not available."""
+    st.error("🚫 **Bibliotecas de visualização não disponíveis**")
+    st.info("📋 **Para visualizações interativas, instale:**")
+    st.code("pip install plotly matplotlib seaborn")
+    st.write("**Dados disponíveis em formato de tabela abaixo:**")
+
+
+def create_histogram(data, x_col, title, nbins=40):
+    """Create histogram with fallback."""
+    if PLOTLY_AVAILABLE:
+        return px.histogram(data, x=x_col, nbins=nbins, title=title)
+    elif MATPLOTLIB_AVAILABLE:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.hist(data[x_col].dropna(), bins=nbins, alpha=0.7, edgecolor='black')
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel(x_col.replace('_', ' ').title(), fontsize=12)
+        ax.set_ylabel('Frequency', fontsize=12)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        return fig
+    return None
+
+
+def create_scatter(data, x_col, y_col, color_col=None, title=""):
+    """Create scatter plot with fallback."""
+    if PLOTLY_AVAILABLE:
+        return px.scatter(data, x=x_col, y=y_col, color=color_col, title=title)
+    elif MATPLOTLIB_AVAILABLE:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        if color_col and color_col in data.columns:
+            categories = data[color_col].unique()
+            colors = plt.cm.tab10(range(len(categories)))
+            
+            for i, cat in enumerate(categories):
+                subset = data[data[color_col] == cat]
+                ax.scatter(subset[x_col], subset[y_col], 
+                          c=[colors[i]], label=cat, alpha=0.7, s=50)
+            ax.legend()
+        else:
+            ax.scatter(data[x_col], data[y_col], alpha=0.7, s=50)
+        
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel(x_col.replace('_', ' ').title(), fontsize=12)
+        ax.set_ylabel(y_col.replace('_', ' ').title(), fontsize=12)
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        return fig
+    return None
+
+
+def create_bar(data, x_col, y_col, title=""):
+    """Create bar chart with fallback."""
+    if PLOTLY_AVAILABLE:
+        return px.bar(data, x=x_col, y=y_col, title=title)
+    elif MATPLOTLIB_AVAILABLE:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        bars = ax.bar(data[x_col], data[y_col], alpha=0.7)
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel(x_col.replace('_', ' ').title(), fontsize=12)
+        ax.set_ylabel(y_col.replace('_', ' ').title(), fontsize=12)
+        plt.xticks(rotation=45, ha='right')
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        return fig
+    return None
+
+
+def display_chart(fig, plotly_func, *args, **kwargs):
+    """Display chart with proper backend."""
+    if PLOTLY_AVAILABLE and fig is not None:
+        st.plotly_chart(fig, use_container_width=True)
+        return True
+    
+    fig = plotly_func(*args, **kwargs)
+    if MATPLOTLIB_AVAILABLE and fig is not None:
+        st.pyplot(fig)
+        plt.close(fig)
+        return True
+    
+    create_fallback_visualization()
+    return False
+
+
 def main():
-    st.set_page_config(page_title="QA Analisys Dashboard", layout="wide")
-    st.title("QA Analisys Dashboard")
+    """Main function for Streamlit app."""
+    st.set_page_config(page_title="QA Analysis Dashboard", layout="wide")
+    st.title("📊 QA Analysis Dashboard")
+    
+    # Show dependency status
+    status_col1, status_col2, status_col3 = st.columns(3)
+    with status_col1:
+        if PLOTLY_AVAILABLE:
+            st.success("✅ Plotly Available")
+        else:
+            st.error("❌ Plotly Not Available")
+    
+    with status_col2:
+        if MATPLOTLIB_AVAILABLE:
+            st.success("✅ Matplotlib Available")
+        else:
+            st.error("❌ Matplotlib Not Available")
+    
+    with status_col3:
+        if _METRICS is not None:
+            st.success("✅ Metrics Calculator Available")
+        else:
+            st.warning("⚠️ Metrics Calculator Fallback")
 
     csv_path = find_latest_results_csv()
     if not csv_path:
-        st.error("Nenhum arquivo results_consolidated.csv encontrado em outputs/.")
+        st.error("❌ Nenhum arquivo results_consolidated.csv encontrado em outputs/.")
+        st.info("💡 Execute o pipeline QA primeiro para gerar dados de análise.")
         return
 
-    st.sidebar.markdown(f"**CSV carregado:** {csv_path}")
+    st.sidebar.markdown(f"📁 **CSV carregado:** `{csv_path.name}`")
 
     try:
-        df = load_csv(csv_path)
+        with st.spinner("📊 Carregando dados..."):
+            df = load_csv(csv_path)
     except Exception as e:
-        st.error(f"Erro ao ler CSV: {e}")
+        st.error(f"❌ Erro ao ler CSV: {e}")
         return
 
     if df.empty:
-        st.warning("CSV carregado, mas está vazio.")
+        st.warning("⚠️ CSV carregado, mas está vazio.")
         return
+
+    st.success(f"✅ **Dados carregados:** {len(df)} linhas, {len(df.columns)} colunas")
 
     cols = list(df.columns)
     colmap = map_columns(cols)
@@ -111,11 +249,13 @@ def main():
 
     missing = [k for k, v in {"question": qcol, "answer": acol, "context": ccol, "score": scol}.items() if v is None]
     if missing:
-        st.error(f"Colunas obrigatórias ausentes no CSV: {', '.join(missing)}")
+        st.error(f"❌ Colunas obrigatórias ausentes no CSV: {', '.join(missing)}")
+        st.write("📋 **Colunas encontradas:**", cols)
         return
 
     # If overlap missing, annotate using available function
     if ocol is None:
+        st.info("🔧 Calculando overlap palavra-contexto...")
         if _METRICS is not None:
             df = _METRICS.annotate_overlap(df)
             ocol = "overlap"
@@ -133,8 +273,8 @@ def main():
     # Main metrics
     total_rows = len(df)
     mean_q_len = float(df["_q_len_words"].mean())
-    mean_score = float(df[scol].mean()) if df[scol].notna().any() else None
-    mean_overlap = float(df[ocol].mean()) if df[ocol].notna().any() else None
+    mean_score = float(df[scol].mean()) if not df[scol].isna().all() else None
+    mean_overlap = float(df[ocol].mean()) if not df[ocol].isna().all() else None
 
     # Top-level metrics display
     c1, c2, c3, c4 = st.columns([2, 2, 2, 3])
@@ -144,12 +284,12 @@ def main():
     c4.metric("Overlap médio", f"{mean_overlap:.4f}" if mean_overlap is not None else "N/A")
 
     # Interpretation
-    with st.expander("Interpretação de Overlap"):
-        st.write("- Alta sobreposição → resposta provavelmente explícita no contexto.")
-        st.write("- Baixa sobreposição → possível inferência incorreta ou alucinação.")
+    with st.expander("📖 Interpretação de Overlap"):
+        st.write("- **Alta sobreposição** → resposta provavelmente explícita no contexto.")
+        st.write("- **Baixa sobreposição** → possível inferência incorreta ou alucinação.")
 
     # Sidebar filters
-    st.sidebar.header("Filtros")
+    st.sidebar.header("🔍 Filtros")
     min_score = st.sidebar.slider("Score mínimo", 0.0, 1.0, 0.0, 0.01)
     min_overlap = st.sidebar.slider("Overlap mínimo", 0.0, 1.0, 0.0, 0.01)
     models = sorted(df[mcol].unique().tolist()) if mcol in df.columns else ["(single)"]
@@ -165,35 +305,73 @@ def main():
         kw = keyword.lower()
         filt = filt[filt[qcol].fillna("").str.lower().str.contains(kw) | filt[acol].fillna("").str.lower().str.contains(kw)]
 
-    st.subheader("Visualizações")
-    fig1 = px.histogram(filt, x=scol, nbins=40, title="Distribuição de Scores")
-    fig2 = px.scatter(filt, x=ocol, y=scol, color=mcol if mcol in df.columns else None, title="Score vs Overlap")
+    st.info(f"📊 **Dados filtrados:** {len(filt)} linhas ({len(filt)/len(df)*100:.1f}% do total)")
+
+    st.subheader("📈 Visualizações")
+    
+    # Visualization 1: Score Distribution
+    fig1 = create_histogram(filt, scol, "Distribuição de Scores", nbins=40)
+    display_chart(fig1, create_histogram, filt, scol, "Distribuição de Scores", nbins=40)
+
+    # Visualizations 2 & 3: Two-column layout
+    colA, colB = st.columns(2)
+    
+    with colA:
+        st.write("**Score vs Overlap:**")
+        fig2 = create_scatter(filt, ocol, scol, 
+                            color_col=mcol if mcol in df.columns else None, 
+                            title="Score vs Overlap")
+        if PLOTLY_AVAILABLE and fig2 is not None:
+            st.plotly_chart(fig2, use_container_width=True)
+        elif MATPLOTLIB_AVAILABLE and fig2 is not None:
+            st.pyplot(fig2)
+            plt.close(fig2)
+        else:
+            st.write("Correlação não disponível")
+    
+    with colB:
+        st.write("**Estatísticas por Modelo:**")
+        if mcol in df.columns:
+            model_stats = filt.groupby(mcol).agg({
+                scol: ['mean', 'count', 'std'],
+                ocol: 'mean'
+            }).round(4)
+            model_stats.columns = ['Score Médio', 'Total', 'Score Std', 'Overlap Médio']
+            st.dataframe(model_stats)
+        else:
+            st.write("Análise por modelo não disponível")
+
+    # Visualization 4: Question Length by Model
     qlen_by_model = None
     if mcol in df.columns:
+        st.write("**Tamanho médio das perguntas por modelo:**")
         qlen_by_model = filt.groupby(mcol)["_q_len_words"].mean().reset_index()
-        fig3 = px.bar(qlen_by_model, x=mcol, y="_q_len_words", title="Tamanho médio das perguntas por modelo (palavras)")
-
-    cA, cB = st.columns(2)
-    cA.plotly_chart(fig1, use_container_width=True)
-    cB.plotly_chart(fig2, use_container_width=True)
-    if qlen_by_model is not None:
-        st.plotly_chart(fig3, use_container_width=True)
+        
+        fig3 = create_bar(qlen_by_model, mcol, "_q_len_words", 
+                         "Tamanho médio das perguntas por modelo (palavras)")
+        if PLOTLY_AVAILABLE and fig3 is not None:
+            st.plotly_chart(fig3, use_container_width=True)
+        elif MATPLOTLIB_AVAILABLE and fig3 is not None:
+            st.pyplot(fig3)
+            plt.close(fig3)
+        else:
+            st.dataframe(qlen_by_model)
 
     # Examples: top 10, bottom 10
-    st.subheader("Exemplos destacados")
+    st.subheader("🏆 Exemplos destacados")
     top10 = df.sort_values(by=scol, ascending=False).head(10)
     bot10 = df.sort_values(by=scol, ascending=True).head(10)
 
-    with st.expander("Top 10 por score"):
+    with st.expander("🔝 Top 10 por score"):
         display_cols = [qcol, acol, ccol, scol, ocol] + ([mcol] if mcol in df.columns else [])
         st.dataframe(top10[display_cols], height=400)
 
-    with st.expander("Bottom 10 por score"):
+    with st.expander("🔻 Bottom 10 por score"):
         display_cols = [qcol, acol, ccol, scol, ocol] + ([mcol] if mcol in df.columns else [])
         st.dataframe(bot10[display_cols], height=400)
 
     # Examples where models disagree (different answers for same question/context)
-    st.subheader("Exemplos com respostas divergentes entre modelos")
+    st.subheader("🔄 Exemplos com respostas divergentes entre modelos")
     if mcol in df.columns:
         grouped = df.groupby([qcol, ccol])
         discord = []
@@ -214,7 +392,7 @@ def main():
         st.write("Dataset contém apenas um modelo; não há comparação entre modelos.")
 
     # Show filtered table overview
-    with st.expander("Tabela filtrada (visualizar)"):
+    with st.expander("📋 Tabela filtrada (visualizar)"):
         st.dataframe(filt.reset_index(drop=True), height=600)
 
 
