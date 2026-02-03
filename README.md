@@ -7,6 +7,7 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 - [Características](#características)
 - [Arquitetura](#arquitetura)
 - [Fluxo de Dados](#fluxo-de-dados)
+- [Dashboard Streamlit](#dashboard-streamlit)
 - [Modelos Disponíveis](#modelos-disponíveis)
 - [Métricas](#métricas)
 - [Instalação](#instalação)
@@ -22,6 +23,7 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 - **Modular**: Arquitetura baseada em componentes independentes e reutilizáveis
 - **Paralelo**: Processamento simultâneo de múltiplos modelos usando `ProcessPoolExecutor`
 - **Flexível**: Seleção de shards e modelos via CLI ou arquivo YAML
+- **Dashboard Interativo**: Interface Streamlit para análise visual dos resultados
 - **Logging estruturado**: Rastreamento detalhado de execução com timestamps
 - **Métricas abrangentes**: Análise de confiança, overlap palavra-contexto, concordância entre modelos
 - **Exportação multi-formato**: Resultados em CSV, JSON e Markdown
@@ -216,6 +218,94 @@ Who invented Python?,Guido van Rossum created Python,Guido van Rossum,0.92,disti
 
 ---
 
+## 📊 Dashboard Streamlit
+
+O projeto inclui um dashboard interativo desenvolvido em Streamlit para análise visual dos resultados do pipeline QA.
+
+### Características do Dashboard
+
+- **Interface Intuitiva**: Visualização amigável via navegador
+- **Análise Exploratória**: Histogramas, scatter plots e gráficos de barras
+- **Filtros Interativos**: Score mínimo, overlap mínimo, seleção de modelos, busca por palavra-chave
+- **Métricas em Tempo Real**: Exibição de médias e totais
+- **Comparações entre Modelos**: Visualização de desempenho relativo
+- **Identificação de Outliers**: Top 10 e Bottom 10 por score
+- **Análise de Divergências**: Exemplos onde modelos dão respostas diferentes
+- **Visualização de Tabelas**: Tabela filtrada com todos os dados
+
+### Como Executar o Dashboard
+
+1. **Após rodar o pipeline**, verifique se há resultados em `outputs/`:
+```bash
+ls outputs/
+# Deve conter diretórios timestamp como: 20260202_123045/
+```
+
+2. **Inicie o dashboard**:
+```bash
+poetry run streamlit run app.py
+```
+
+3. **Abra no navegador**: O dashboard geralmente abre automaticamente em `http://localhost:8501`
+
+### Componentes do Dashboard
+
+#### Métricas Principais
+- **Total linhas**: Número total de predições analisadas
+- **Tamanho médio (palavras)**: Comprimento médio das perguntas
+- **Score médio**: Confiança média das respostas
+- **Overlap médio**: Sobreposição média palavra-contexto
+
+#### Visualizações
+- **Distribuição de Scores**: Histograma da confiança das respostas
+- **Score vs Overlap**: Scatter plot mostrando correlação
+- **Tamanho médio por modelo**: Comparação do comprimento das perguntas atendidas por cada modelo
+
+#### Filtros Interativos
+- **Score mínimo**: Filtra resultados por confiança mínima
+- **Overlap mínimo**: Filtra por sobreposição palavra-contexto mínima
+- **Modelos**: Seleção múltipla de modelos para comparar
+- **Busca por palavra-chave**: Procura termos em perguntas ou respostas
+
+#### Análises Detalhadas
+- **Top/Bottom 10**: Melhores e piores exemplos por score
+- **Respostas Divergentes**: Casos onde modelos discordam na mesma pergunta
+- **Tabela Filtrada**: Visualização completa dos dados filtrados
+
+### Estrutura de Dados para o Dashboard
+
+O dashboard automaticamente detecta e carrega o arquivo `results_consolidated.csv` mais recente. O arquivo deve conter:
+
+| Coluna | Descrição |
+|--------|-----------|
+| `question`/`query`/`prompt` | Pergunta de entrada |
+| `answer`/`prediction` | Resposta gerada |
+| `context`/`passage` | Contexto fornecido |
+| `score`/`model_score` | Confiança do modelo |
+| `overlap` (opcional) | Sobreposição palavra-contexto |
+| `model` (opcional) | Nome do modelo |
+
+O dashboard mapeia automaticamente diferentes nomes de colunas para os campos esperados.
+
+### Exemplos de Uso
+
+#### Análise de Qualidade
+1. Filtre por `score ≥ 0.8` para ver respostas de alta confiança
+2. Use `overlap ≥ 0.7` para encontrar respostas bem ancoradas no contexto
+3. Compare diferentes modelos selecionando-os no filtro
+
+#### Identificação de Problemas
+1. Analise o scatter plot para identificar padrões de score vs overlap
+2. Verifique os "Bottom 10" para encontrar casos problemáticos
+3. Use a busca por palavra-chave para investigar temas específicos
+
+#### Análise Comparativa
+1. Selecione múltiplos modelos para comparar desempenho
+2. Visualize "Respostas Divergentes" para entender diferenças entre modelos
+3. Compare o tamanho médio das perguntas por modelo
+
+---
+
 ## 🤖 Modelos Disponíveis
 
 | Modelo | Checkpoint HF | Tamanho | Descrição |
@@ -382,6 +472,11 @@ echo "HF_TOKEN=seu_token_aqui" > .env
 4. **Verifique a instalação:**
 ```bash
 poetry run pytest -q
+```
+
+5. **(Opcional) Teste o dashboard:**
+```bash
+poetry run streamlit run app.py
 ```
 
 ---
@@ -587,6 +682,8 @@ poetry run pytest tests/tests_metrics_overlap.py -v
 | pandas | ≥1.3 | Manipulação de dados |
 | transformers | ≥4.20 | Modelos HF QA |
 | torch | ≥1.10 | Backend de ML |
+| streamlit | ≥1.20 | Dashboard web interativo |
+| plotly | ≥5.0 | Visualizações interativas |
 | pyyaml | ≥5.4 | Configuração |
 | tqdm | ≥4.60 | Barras de progresso |
 | huggingface-hub | ≥0.12 | Autenticação HF |
@@ -597,6 +694,7 @@ poetry run pytest tests/tests_metrics_overlap.py -v
 
 ```
 dashboard_pln/
+├── app.py                         # Dashboard Streamlit para análise visual
 ├── src/
 │   ├── __init__.py
 │   ├── base_model.py              # Classe abstrata
@@ -680,4 +778,4 @@ Este projeto está disponível sob a licença MIT. Veja `LICENSE` para detalhes.
 ---
 
 **Última atualização:** Fevereiro 2, 2026
-**Versão da Pipeline:** 2.0 (com overlap palavra-contexto)
+**Versão da Pipeline:** 2.1 (com dashboard Streamlit)
