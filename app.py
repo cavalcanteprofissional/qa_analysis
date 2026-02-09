@@ -15,9 +15,8 @@ try:
     import plotly.express as px
     import plotly.graph_objects as go
     PLOTLY_AVAILABLE = True
-    st.write("<!-- Plotly successfully imported -->")
 except ImportError:
-    st.write("<!-- Plotly not available -->")
+    PLOTLY_AVAILABLE = False
 
 # Try to import Matplotlib/Seaborn
 try:
@@ -236,27 +235,6 @@ def main():
     if _COLOR_MANAGER_AVAILABLE:
         color_manager = ColorManager()
         color_manager.load_from_session_state()
-    
-    # Show dependency status
-    status_col1, status_col2, status_col3 = st.columns(3)
-    with status_col1:
-        if PLOTLY_AVAILABLE:
-            st.success("✅ Plotly Available")
-        else:
-            st.error("❌ Plotly Not Available")
-    
-    with status_col2:
-        if MATPLOTLIB_AVAILABLE:
-            st.success("✅ Matplotlib Available")
-        else:
-            st.error("❌ Matplotlib Not Available")
-    
-    with status_col3:
-        if _METRICS is not None:
-            st.success("✅ Metrics Calculator Available")
-        else:
-            st.warning("⚠️ Metrics Calculator Fallback")
-
     csv_path = find_latest_results_csv()
     if not csv_path:
         st.error("❌ Nenhum arquivo results_consolidated.csv encontrado em outputs/.")
@@ -275,8 +253,6 @@ def main():
     if df.empty:
         st.warning("⚠️ CSV carregado, mas está vazio.")
         return
-
-    st.success(f"✅ **Dados carregados:** {len(df)} linhas, {len(df.columns)} colunas")
 
     cols = list(df.columns)
     colmap = map_columns(cols)
@@ -445,8 +421,6 @@ def main():
     if keyword:
         kw = keyword.lower()
         filt = filt[filt[qcol].fillna("").str.lower().str.contains(kw) | filt[acol].fillna("").str.lower().str.contains(kw)]
-
-    st.info(f"📊 **Dados filtrados:** {len(filt)} linhas ({len(filt)/len(df)*100:.1f}% do total)")
 
     st.subheader("📈 Visualizações")
     
