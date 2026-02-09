@@ -670,7 +670,19 @@ poetry run pytest tests/test_model_selector.py -v
 ### Rodar apenas testes de overlap:
 
 ```bash
-poetry run pytest tests/tests_metrics_overlap.py -v
+poetry run pytest tests/test_metrics_overlap.py -v
+```
+
+### Rodar testes do sistema de cores:
+
+```bash
+poetry run pytest tests/test_color_system.py -v
+```
+
+### Rodar testes do sistema de cores (versão simples):
+
+```bash
+poetry run pytest tests/test_color_system_simple.py -v
 ```
 
 ---
@@ -711,9 +723,11 @@ dashboard_pln/
 │       ├── roberta_model.py       # Wrapper RoBERTa
 │       └── bert_model.py          # Wrapper BERT
 ├── tests/
+│   ├── test_color_system.py
+│   ├── test_color_system_simple.py
 │   ├── test_data_loader.py
 │   ├── test_model_selector.py
-│   └── tests_metrics_overlap.py
+│   └── test_metrics_overlap.py
 ├── data/
 │   └── shards/                    # Arquivos CSV de entrada
 │       ├── shard_000.csv
