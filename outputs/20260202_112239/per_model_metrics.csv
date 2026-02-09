@@ -1,0 +1,4 @@
+model,count,mean_score,median_score,avg_overlap_fraction,avg_overlap_count
+bert,1000,0.0,0.0,1.0,3.0
+distilbert,1000,0.0,0.0,1.0,3.0
+roberta,1000,0.0,0.0,1.0,3.0

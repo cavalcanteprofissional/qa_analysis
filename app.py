@@ -75,9 +75,17 @@ def find_latest_results_csv(outputs_dir: Path = Path("outputs")) -> Optional[Pat
 
 @st.cache_data(show_spinner=False)
 def load_csv(path: Path) -> pd.DataFrame:
-    """Load CSV file with caching."""
-    df = pd.read_csv(path)
-    return df
+    """Load CSV file with caching. Supports both .csv and .csv.gz formats."""
+    # If .csv doesn't exist, try .csv.gz
+    if not path.exists() and path.suffix == '.csv':
+        gz_path = path.with_suffix('.csv.gz')
+        if gz_path.exists():
+            return pd.read_csv(gz_path, compression='gzip')
+    
+    # Load with automatic compression detection
+    if str(path).endswith('.gz'):
+        return pd.read_csv(path, compression='gzip')
+    return pd.read_csv(path)
 
 
 def map_columns(cols):

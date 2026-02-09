@@ -16,6 +16,6 @@ htmlcov/
 # Local env
 .env
 
-# Logs and outputs
-logs/
-outputs/
+# Large CSV files (compressed versions are tracked)
+outputs/*/results_consolidated.csv
+!outputs/*/results_consolidated.csv.gz

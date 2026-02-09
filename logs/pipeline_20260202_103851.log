@@ -1,0 +1,2 @@
+2026-02-02 10:38:51 | INFO | qa_pipeline | Starting pipeline run
+2026-02-02 10:38:52 | ERROR | qa_pipeline | Input data must contain 'question' and 'context' columns

@@ -1,0 +1,4 @@
+2026-02-02 16:47:33 | INFO | qa_pipeline | Starting pipeline run
+2026-02-02 16:47:33 | INFO | qa_pipeline | Mapping input columns: 'query'->'question', 'text'->'context'
+2026-02-02 16:47:33 | INFO | qa_pipeline | CUDA available: False
+2026-02-02 16:49:50 | INFO | qa_pipeline | Saved consolidated results to outputs\20260202_164950\results_consolidated.csv
