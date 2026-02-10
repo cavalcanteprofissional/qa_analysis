@@ -53,17 +53,27 @@ def find_latest_results_csv(outputs_dir: Path = Path("outputs")) -> Optional[Pat
     cand_dirs = [p for p in outputs_dir.iterdir() if p.is_dir() and pattern.match(p.name)]
     if cand_dirs:
         latest = max(cand_dirs, key=lambda p: p.name)
-        candidate = latest / "results_consolidated.csv"
-        if candidate.exists():
-            return candidate
+        # Try .csv.gz first (compressed version for Cloud)
+        candidate_gz = latest / "results_consolidated.csv.gz"
+        if candidate_gz.exists():
+            return candidate_gz
+        # Fallback to .csv (uncompressed version for local)
+        candidate_csv = latest / "results_consolidated.csv"
+        if candidate_csv.exists():
+            return candidate_csv
 
     # Fallback: pick newest directory by mtime
     dirs = [p for p in outputs_dir.iterdir() if p.is_dir()]
     if dirs:
         latest = max(dirs, key=lambda p: p.stat().st_mtime)
-        candidate = latest / "results_consolidated.csv"
-        if candidate.exists():
-            return candidate
+        # Try .csv.gz first
+        candidate_gz = latest / "results_consolidated.csv.gz"
+        if candidate_gz.exists():
+            return candidate_gz
+        # Fallback to .csv
+        candidate_csv = latest / "results_consolidated.csv"
+        if candidate_csv.exists():
+            return candidate_csv
 
     # As last resort search recursively for any results_consolidated.csv and pick newest
     matches = list(outputs_dir.rglob("results_consolidated.csv"))
