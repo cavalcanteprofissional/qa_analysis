@@ -259,7 +259,22 @@ def main():
         st.info("💡 Execute o pipeline QA primeiro para gerar dados de análise.")
         return
 
-    st.sidebar.markdown(f"📁 **CSV carregado:** `{csv_path.name}`")
+    csv_dir_name = csv_path.parent.name
+    if len(csv_dir_name) == 15 and csv_dir_name[8] == '_':
+        try:
+            from datetime import datetime
+            date_obj = datetime.strptime(csv_dir_name, "%Y%m%d_%H%M%S")
+            formatted_date = date_obj.strftime("%d/%m/%Y - %H:%M:%S")
+        except ValueError:
+            formatted_date = csv_dir_name
+    else:
+        formatted_date = None
+
+    if formatted_date:
+        st.sidebar.markdown(f"📁 **CSV carregado:** `{csv_path.name}`")
+        st.sidebar.markdown(f"📅 **Data de execução:** `{formatted_date}`")
+    else:
+        st.sidebar.markdown(f"📁 **CSV carregado:** `{csv_path.name}`")
 
     try:
         with st.spinner("📊 Carregando dados..."):
@@ -446,56 +461,40 @@ def main():
     fig1 = create_histogram(filt, scol, "Distribuição de Scores", nbins=40)
     display_chart(fig1, create_histogram, filt, scol, "Distribuição de Scores", nbins=40)
 
-# Visualizations 2 & 3: Two-column layout
-    colA, colB = st.columns(2)
-    
-    with colA:
-        st.write("**Score vs Overlap:**")
-        fig2 = create_scatter(filt, ocol, scol,
-                             color_col=mcol if mcol in df.columns else None, 
-                             title="Score vs Overlap",
-                             color_manager=color_manager)
-        if PLOTLY_AVAILABLE and fig2 is not None:
-            st.plotly_chart(fig2, use_container_width=True)
-        elif MATPLOTLIB_AVAILABLE and fig2 is not None:
-            st.pyplot(fig2)
-            plt.close(fig2)
-        else:
-            st.write("Correlação não disponível")
+# Visualizations 2: Statistics by Model
+    colB = st.columns(1)[0]
     
     with colB:
         st.write("**Estatísticas por Modelo:**")
         if mcol in df.columns:
             model_stats = filt.groupby(mcol).agg({
                 scol: ['mean', 'count', 'std'],
-                ocol: 'mean'
+                ocol: 'mean',
+                'question_length_words': 'mean',
+                'question_length_chars': 'mean'
             }).round(4)
-            model_stats.columns = ['Score Médio', 'Total', 'Score Std', 'Overlap Médio']
+            model_stats.columns = ['Score Médio', 'Total', 'Score Std', 'Overlap Médio', 'Tamanho Médio (palavras)', 'Tamanho Médio (letras)']
             st.dataframe(model_stats)
         else:
             st.write("Análise por modelo não disponível")
 
-    # Visualization 4: Question Length by Model
-    qlen_by_model = None
-    if mcol in df.columns:
-        st.write("**Tamanho médio das perguntas por modelo:**")
-        qlen_by_model = filt.groupby(mcol)["question_length_words"].mean().reset_index()
-        
-        fig3 = create_bar(qlen_by_model, mcol, "question_length_words", 
-                          "Tamanho médio das perguntas por modelo (palavras)",
-                          color_manager=color_manager)
-        if PLOTLY_AVAILABLE and fig3 is not None:
-            st.plotly_chart(fig3, use_container_width=True)
-        elif MATPLOTLIB_AVAILABLE and fig3 is not None:
-            st.pyplot(fig3)
-            plt.close(fig3)
-        else:
-            st.dataframe(qlen_by_model)
-
     # Examples: top 10, bottom 10
     st.subheader("🏆 Exemplos destacados")
-    top10 = df.sort_values(by=scol, ascending=False).head(10)
-    bot10 = df.sort_values(by=scol, ascending=True).head(10)
+    
+    if mcol in df.columns and ocol in df.columns:
+        model_overlap = df.groupby(mcol)[ocol].mean()
+        best_model = model_overlap.idxmax()
+        best_model_overlap = model_overlap.max()
+        
+        df_best = df[df[mcol] == best_model]
+        
+        st.info(f"📊 Filtrando pelo modelo com maior overlap médio: **{best_model}** (overlap: {best_model_overlap:.4f})")
+        
+        top10 = df_best.sort_values(by=scol, ascending=False).head(10)
+        bot10 = df_best.sort_values(by=scol, ascending=True).head(10)
+    else:
+        top10 = df.sort_values(by=scol, ascending=False).head(10)
+        bot10 = df.sort_values(by=scol, ascending=True).head(10)
 
     with st.expander("🔝 Top 10 por score"):
         display_cols = [qcol, acol, ccol, scol, ocol] + ([mcol] if mcol in df.columns else [])

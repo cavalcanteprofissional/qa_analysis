@@ -270,6 +270,41 @@ with col4:
                 st.pyplot(fig_overlap)
                 plt.close(fig_overlap)
 
+# Row 2.5: Score vs Overlap
+st.markdown("---")
+st.subheader("🎯 Score vs Overlap")
+
+if scol in filt.columns and ocol in filt.columns:
+    col_s_o_1, col_s_o_2 = st.columns([3, 1])
+    
+    with col_s_o_1:
+        st.write("**Score vs Overlap**")
+        fig_score_overlap = create_advanced_scatter(
+            filt, ocol, scol,
+            color_col=mcol if mcol in filt.columns else None,
+            title="Relação entre Score e Overlap"
+        )
+        if fig_score_overlap is not None:
+            if PLOTLY_AVAILABLE_PAGE:
+                st.plotly_chart(fig_score_overlap, use_container_width=True)
+            elif MATPLOTLIB_AVAILABLE_PAGE:
+                st.pyplot(fig_score_overlap)
+                plt.close(fig_score_overlap)
+    
+    with col_s_o_2:
+        st.write("**Estatísticas**")
+        if ocol in filt.columns and scol in filt.columns:
+            corr_val = filt[ocol].corr(filt[scol])
+            st.metric("Correlação Score-Overlap", f"{corr_val:.4f}")
+            
+            avg_overlap_high_score = filt[filt[scol] >= 0.8][ocol].mean() if len(filt[filt[scol] >= 0.8]) > 0 else 0
+            avg_overlap_low_score = filt[filt[scol] < 0.5][ocol].mean() if len(filt[filt[scol] < 0.5]) > 0 else 0
+            
+            st.metric("Overlap médio (score ≥ 0.8)", f"{avg_overlap_high_score:.4f}")
+            st.metric("Overlap médio (score < 0.5)", f"{avg_overlap_low_score:.4f}")
+else:
+    st.warning("Colunas de Score ou Overlap não disponíveis.")
+
 # Row 3: Correlation Heatmap
 st.markdown("---")
 st.subheader("🔗 Matriz de Correlação")

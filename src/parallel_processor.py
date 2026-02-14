@@ -18,6 +18,8 @@ def _process_model_worker(hf_name: str, df_rows: List[Dict[str, str]], batch_siz
 
     Recebe `hf_name` (modelo HF), lista de inputs (cada um com question/context)
     e retorna lista de resultados.
+    
+    Usa batch processing real para otimizar performance.
     """
     try:
         from transformers import pipeline
@@ -30,14 +32,26 @@ def _process_model_worker(hf_name: str, df_rows: List[Dict[str, str]], batch_siz
 
     results = []
     total = len(df_rows)
+    
     for i in range(0, total, batch_size):
         batch = df_rows[i : i + batch_size]
-        for row in batch:
-            try:
-                res = pipe(question=row["question"], context=row["context"])
-            except Exception as e:
-                res = {"answer": "", "score": 0.0, "error": str(e)}
-            
+        
+        # Criar lista de inputs para processamento em batch
+        batch_inputs = [{"question": row["question"], "context": row["context"]} for row in batch]
+        
+        try:
+            # Processar em batch (otimizado)
+            batch_results = pipe(batch_inputs)
+        except Exception as e:
+            # Se batch falhar, tratar como erro genérico
+            batch_results = [{"answer": "", "score": 0.0, "error": str(e)} for _ in batch]
+        
+        # Garantir que batch_results seja uma lista
+        if isinstance(batch_results, dict):
+            batch_results = [batch_results]
+        
+        # Processar cada resultado
+        for row, res in zip(batch, batch_results):
             # Garantir que tem as chaves esperadas
             if "answer" not in res:
                 res["answer"] = ""
