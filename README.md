@@ -8,6 +8,11 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 - [Arquitetura](#arquitetura)
 - [Fluxo de Dados](#fluxo-de-dados)
 - [Dashboard Streamlit](#dashboard-streamlit)
+  - [Estrutura de Páginas](#estrutura-de-páginas)
+  - [Características do Dashboard](#características-do-dashboard)
+  - [Como Executar o Dashboard](#como-executar-o-dashboard)
+  - [Componentes do Dashboard (Home)](#componentes-do-dashboard-home)
+  - [Componentes do Dashboard (Análises Avançadas)](#componentes-do-dashboard-análises-avançadas)
 - [Modelos Disponíveis](#modelos-disponíveis)
 - [Métricas](#métricas)
 - [Instalação](#instalação)
@@ -15,6 +20,9 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 - [Exemplos](#exemplos)
 - [Estrutura de Saídas](#estrutura-de-saídas)
 - [Configuração](#configuração)
+- [Testes](#testes)
+- [Estrutura de Projeto](#estrutura-de-projeto)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -22,11 +30,14 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 
 - **Modular**: Arquitetura baseada em componentes independentes e reutilizáveis
 - **Paralelo**: Processamento simultâneo de múltiplos modelos usando `ProcessPoolExecutor`
+- **Batch Processing Otimizado**: Inferência em batch real para 2-5x mais performance
 - **Flexível**: Seleção de shards e modelos via CLI ou arquivo YAML
-- **Dashboard Interativo**: Interface Streamlit para análise visual dos resultados
+- **Dashboard Multipáginas**: Interface Streamlit com múltiplas páginas (Home + Análises Avançadas)
+- **Sistema de Cores Avançado**: ColorManager para personalização de cores por modelo
 - **Logging estruturado**: Rastreamento detalhado de execução com timestamps
 - **Métricas abrangentes**: Análise de confiança, overlap palavra-contexto, concordância entre modelos
-- **Exportação multi-formato**: Resultados em CSV, JSON e Markdown
+- **Tamanho de Querys**: Métricas de tamanho médio por palavra e por letra
+- **Exportação multi-formato**: Resultados em CSV, JSON, Markdown (suporta .csv.gz)
 - **Testes automatizados**: Cobertura de componentes principais
 - **Poetry**: Gerenciamento de dependências via Poetry
 
@@ -86,7 +97,7 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 #### 3. **ParallelProcessor** (`src/parallel_processor.py`)
 - Executa modelos em processos paralelos separados
 - Cada worker instancia um pipeline HF localmente
-- Processamento em batches para eficiência
+- **Batch processing real**: Otimizado para inferência em lote (2-5x mais rápido)
 - Suporta CUDA quando disponível
 
 #### 4. **PipelineController** (`src/pipeline_controller.py`)
@@ -222,6 +233,15 @@ Who invented Python?,Guido van Rossum created Python,Guido van Rossum,0.92,disti
 
 O projeto inclui um dashboard interativo desenvolvido em Streamlit para análise visual dos resultados do pipeline QA.
 
+### Estrutura de Páginas
+
+O dashboard é organizado em múltiplas páginas:
+
+| Página | Arquivo | Descrição |
+|--------|---------|-----------|
+| **Home** | `app.py` | Métricas gerais, visualizações principais, exemplos destacados |
+| **Análises Avançadas** | `pages/01_analises_avancadas.py` | Violin plots, correlações, Score vs Overlap detalhado |
+
 ### Características do Dashboard
 
 - **Interface Intuitiva**: Visualização amigável via navegador
@@ -229,9 +249,11 @@ O projeto inclui um dashboard interativo desenvolvido em Streamlit para análise
 - **Filtros Interativos**: Score mínimo, overlap mínimo, seleção de modelos, busca por palavra-chave
 - **Métricas em Tempo Real**: Exibição de médias e totais
 - **Comparações entre Modelos**: Visualização de desempenho relativo
-- **Identificação de Outliers**: Top 10 e Bottom 10 por score
+- **Sistema de Cores**: ColorManager para personalização de cores por modelo
+- **Identificação de Outliers**: Top 10 e Bottom 10 por score (filtrado pelo modelo com maior overlap)
 - **Análise de Divergências**: Exemplos onde modelos dão respostas diferentes
 - **Visualização de Tabelas**: Tabela filtrada com todos os dados
+- **Data de Execução**: Exibição dinâmica da data do CSV carregado
 
 ### Como Executar o Dashboard
 
@@ -248,18 +270,21 @@ poetry run streamlit run app.py
 
 3. **Abra no navegador**: O dashboard geralmente abre automaticamente em `http://localhost:8501`
 
-### Componentes do Dashboard
+### Componentes do Dashboard (Home)
 
 #### Métricas Principais
 - **Total linhas**: Número total de predições analisadas
-- **Tamanho médio (palavras)**: Comprimento médio das perguntas
+- **Tamanho médio das Querys (palavra)**: Comprimento médio das perguntas em palavras
+- **Tamanho médio das Querys (letra)**: Comprimento médio das perguntas em caracteres (sem espaços)
 - **Score médio**: Confiança média das respostas
 - **Overlap médio**: Sobreposição média palavra-contexto
 
 #### Visualizações
 - **Distribuição de Scores**: Histograma da confiança das respostas
-- **Score vs Overlap**: Scatter plot mostrando correlação
-- **Tamanho médio por modelo**: Comparação do comprimento das perguntas atendidas por cada modelo
+
+#### Estatísticas por Modelo
+- Score Médio, Total, Score Std, Overlap Médio
+- Tamanho Médio (palavras), Tamanho Médio (letras)
 
 #### Filtros Interativos
 - **Score mínimo**: Filtra resultados por confiança mínima
@@ -267,8 +292,21 @@ poetry run streamlit run app.py
 - **Modelos**: Seleção múltipla de modelos para comparar
 - **Busca por palavra-chave**: Procura termos em perguntas ou respostas
 
-#### Análises Detalhadas
-- **Top/Bottom 10**: Melhores e piores exemplos por score
+### Componentes do Dashboard (Análises Avançadas)
+
+#### Violin Plot
+- Distribuição de Scores por modelo
+
+#### Scatter Plots
+- Tamanho da Pergunta vs Score
+- **Score vs Overlap**: Correlação com linha de tendência e estatísticas
+
+#### Matriz de Correlação
+- Heatmap mostrando correlações entre todas as métricas numéricas
+
+### Análises Detalhadas
+
+- **Top/Bottom 10**: Melhores e piores exemplos por score (filtrado pelo modelo com maior overlap médio)
 - **Respostas Divergentes**: Casos onde modelos discordam na mesma pergunta
 - **Tabela Filtrada**: Visualização completa dos dados filtrados
 
@@ -562,7 +600,7 @@ poetry run python -m src.main --shards shard_055.csv --models distilbert --max-s
 ```
 outputs/
 └── 20260202_123045/              # Timestamp: YYYYMMDD_HHMMSS
-    ├── results_consolidated.csv   # Tabela completa (predições + métricas)
+    ├── results_consolidated.csv   # Tabela completa (ou .csv.gz para deploy)
     ├── metrics.json               # Métricas estruturadas
     ├── metrics_summary.md         # Relatório legível
     └── per_model_metrics.csv      # Resumo por modelo
@@ -577,6 +615,8 @@ question,context,answer,score,model,_shard,overlap_count,overlap_fraction
 "What is Python?","Python is a...",Python,0.95,distilbert,shard_001.csv,1,1.0
 "What is Python?","Python is a...",Programming language,0.89,roberta,shard_001.csv,2,1.0
 ```
+
+**Nota:** Para deploy no GitHub/Streamlit Cloud, o arquivo pode ser salvo como `.csv.gz` (comprimido).
 
 **Uso:** Análise manual, exportação para BI, validação detalhada
 
@@ -706,7 +746,10 @@ poetry run pytest tests/test_color_system_simple.py -v
 
 ```
 dashboard_pln/
-├── app.py                         # Dashboard Streamlit para análise visual
+├── app.py                         # Dashboard Streamlit (página principal)
+├── pages/
+│   ├── __init__.py
+│   └── 01_analises_avancadas.py  # Dashboard Streamlit (análises avançadas)
 ├── src/
 │   ├── __init__.py
 │   ├── base_model.py              # Classe abstrata
@@ -715,8 +758,9 @@ dashboard_pln/
 │   ├── main.py                    # Entrada CLI
 │   ├── metrics_calculator.py      # Cálculo de métricas
 │   ├── model_selector.py          # Registro de modelos
-│   ├── parallel_processor.py      # Processamento paralelo
+│   ├── parallel_processor.py      # Processamento paralelo (batch otimizado)
 │   ├── pipeline_controller.py     # Orquestrador
+│   ├── color_manager.py           # Gerenciador de cores
 │   └── models/
 │       ├── __init__.py
 │       ├── distilbert_model.py    # Wrapper DistilBERT
@@ -737,11 +781,15 @@ dashboard_pln/
 │   └── pipeline_config.yaml       # Configuração YAML
 ├── logs/                          # Saídas de log
 ├── outputs/                       # Resultados
+│   └── 20260202_123045/
+│       ├── results_consolidated.csv   # ou .csv.gz
+│       ├── metrics.json
+│       ├── metrics_summary.md
+│       └── per_model_metrics.csv
 ├── .env                           # Variáveis de ambiente
 ├── pyproject.toml                 # Dependências Poetry
-├── README_PT.md                   # Este arquivo
+├── README.md                      # Este arquivo
 └── projeto_av02_pln_lucas_cavalcante.ipynb  # Notebook de análise
-```
 
 ---
 
@@ -791,5 +839,5 @@ Este projeto está disponível sob a licença MIT. Veja `LICENSE` para detalhes.
 
 ---
 
-**Última atualização:** Fevereiro 2, 2026
-**Versão da Pipeline:** 2.1 (com dashboard Streamlit)
+**Última atualização:** Fevereiro 14, 2026
+**Versão da Pipeline:** 2.2 (com dashboard multipáginas e batch processing otimizado)
