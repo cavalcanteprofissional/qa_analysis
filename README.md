@@ -47,38 +47,56 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 
 ### Componentes Principais
 
+```mermaid
+graph TD
+    subgraph "Pipeline"
+        A[PipelineController] --> B[Data Loader]
+        B --> C[Model Selector]
+        C --> D[Parallel Processor]
+        D --> E[Metrics Calculator]
+    end
+    
+    subgraph "Data"
+        F[Shards CSV] --> B
+    end
+    
+    subgraph "Models"
+        G[DistilBERT] --> D
+        H[RoBERTa] --> D
+        I[BERT] --> D
+    end
+    
+    E --> J[Output Files]
+    J --> K[Dashboard Streamlit]
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    PipelineController                        │
-│                (Orquestrador Principal)                      │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                ┌─────────────┼─────────────┐
-                │             │             │
-        ┌───────▼──────┐ ┌────▼────┐ ┌────▼──────────┐
-        │ ShardLoader  │ │ Model   │ │ Parallel      │
-        │ (Dados)      │ │ Selector│ │ Processor     │
-        └──────────────┘ └─────────┘ └───────────────┘
-                │             │             │
-                │             ▼             │
-                │      ┌──────────────┐    │
-                │      │ Model        │    │
-                │      │ Registry     │    │
-                │      └──────────────┘    │
-                │                         │
-                └─────────────┬───────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │ HF Pipeline       │
-                    │ (Modelos: BERT,   │
-                    │  DistilBERT,      │
-                    │  RoBERTa)         │
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼──────────┐
-                    │ MetricsCalculator  │
-                    │ (Análise e Saídas) │
-                    └────────────────────┘
+
+### Visão Detalhada do Fluxo
+
+```mermaid
+flowchart TB
+    subgraph Input
+        A1[CLI Args]
+        A2[YAML Config]
+        A3[Env Vars]
+    end
+    
+    A1 & A2 & A3 --> B[PipelineController]
+    
+    B --> C[Data Loading]
+    C --> D[Model Selection]
+    D --> E[Parallel Processing]
+    E --> F[Results Aggregation]
+    F --> G[Metrics Calculation]
+    G --> H[Output Generation]
+    
+    style A1 fill:#e1f5fe
+    style B fill:#fff3e0
+    style C fill:#e8f5e9
+    style D fill:#f3e5f5
+    style E fill:#ffebee
+    style F fill:#e0f7fa
+    style G fill:#fce4ec
+    style H fill:#f1f8e9
 ```
 
 ### Componentes Detalhados
@@ -126,75 +144,95 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 
 ### Fluxo de Execução
 
+```mermaid
+graph LR
+    subgraph Input
+        A[CLI Args]
+        B[YAML Config]
+        C[Env Vars]
+    end
+    
+    A & B & C --> D[PipelineController]
+    
+    D --> E[Data Loader]
+    E --> F[Model Selector]
+    F --> G{Parallel Processor}
+    G -->|DistilBERT| H[Worker 1]
+    G -->|RoBERTa| I[Worker 2]
+    G -->|BERT| J[Worker 3]
+    H & I & J --> K[Results Aggregation]
+    K --> L[Metrics Calculator]
+    L --> M[Output Files]
+    M --> N[Dashboard]
+    
+    style A fill:#e1f5fe
+    style B fill:#e1f5fe
+    style C fill:#e1f5fe
+    style D fill:#fff3e0
+    style E fill:#e8f5e9
+    style F fill:#f3e5f5
+    style G fill:#ffebee
+    style H fill:#ffebee
+    style I fill:#ffebee
+    style J fill:#ffebee
+    style K fill:#e0f7fa
+    style L fill:#fce4ec
+    style M fill:#f1f8e9
+    style N fill:#e8eaf6
 ```
-1. Leitura de Entrada
-   │
-   ├─ CLI: args (--shards, --models, ...)
-   ├─ YAML Config (opcional): pipeline_config.yaml
-   └─ Variáveis de Ambiente: HF_TOKEN, etc.
-   │
-   ▼
-2. Carregamento de Dados (ShardLoader)
-   │
-   ├─ Descobre shards em data/shards/*.csv
-   ├─ Seleciona conforme critério (padrão/lista/all)
-   ├─ Concatena em DataFrame único
-   └─ Mapeia colunas (query→question, text→context)
-   │
-   ▼
-3. Seleção de Modelos (ModelSelector)
-   │
-   ├─ Obtém lista de descritores do registry
-   ├─ Filtra conforme seleção
-   └─ Retorna {key, class, hf_name} por modelo
-   │
-   ▼
-4. Processamento Paralelo (ParallelProcessor)
-   │
-   ├─ Cria ProcessPoolExecutor (N workers)
-   ├─ Cada worker:
-   │  ├─ Recebe (hf_name, df_rows, batch_size, use_cuda)
-   │  ├─ Instancia pipeline HF localmente
-   │  ├─ Processa em batches
-   │  └─ Retorna [{"question": ..., "context": ..., "answer": ..., "score": ...}]
-   └─ Aguarda conclusão de todos workers
-   │
-   ▼
-5. Agregação de Resultados
-   │
-   ├─ Combina outputs de todos modelos
-   ├─ Adiciona coluna "model" = key do modelo
-   └─ DataFrame consolidado: (question, context, answer, score, model, _shard)
-   │
-   ▼
-6. Anotação de Métricas (MetricsCalculator.annotate_overlap)
-   │
-   ├─ Para cada linha:
-   │  ├─ Extrai palavras da resposta
-   │  ├─ Verifica presença no contexto
-   │  ├─ Calcula overlap_count e overlap_fraction
-   └─ Adiciona colunas ao DataFrame
-   │
-   ▼
-7. Cálculo de Métricas Agregadas
-   │
-   ├─ Overall: mean(score), mean(overlap), total predictions
-   ├─ Per-Model: métricas por modelo
-   ├─ Comparativa: concordância, distribuição de respostas
-   └─ Categórica: distribuição de confiança
-   │
-   ▼
-8. Geração de Saídas
-   │
-   ├─ results_consolidated.csv: tabela com todas predições + overlap
-   ├─ metrics.json: métricas estruturadas
-   ├─ metrics_summary.md: relatório legível
-   ├─ per_model_metrics.csv: resumo por modelo
-   └─ Logs: logs/qa_pipeline_TIMESTAMP.log
-   │
-   ▼
-9. Retorno
-   └─ {"results_df": DataFrame, "metrics": dict, "out_dir": Path}
+
+### Pipeline de Processamento Detalhado
+
+```mermaid
+flowchart LR
+    subgraph "1. Input"
+        A[CLI Args]
+        B[YAML Config]
+        C[Env Vars]
+    end
+    
+    subgraph "2. Data Loading"
+        D[Discover Shards]
+        E[Select & Map]
+    end
+    
+    subgraph "3. Model Selection"
+        F[Get Descriptors]
+        G[Filter Models]
+    end
+    
+    subgraph "4. Parallel Processing"
+        H[ProcessPoolExecutor]
+        I[Batch Inference]
+    end
+    
+    subgraph "5. Aggregation"
+        J[Combine Results]
+        K[Add Model Column]
+    end
+    
+    subgraph "6. Metrics"
+        L[Annotate Overlap]
+        M[Calculate Stats]
+    end
+    
+    subgraph "7. Output"
+        N[CSV/JSON/MD]
+        O[Logs]
+    end
+    
+    A & B & C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+    M --> N
+    M --> O
 ```
 
 ### Exemplo de Transformação de Dados
