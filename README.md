@@ -33,7 +33,7 @@ Uma pipeline robusta, modular e paralela para processar e analisar respostas de 
 - **Batch Processing Otimizado**: Inferência em batch real para 2-5x mais performance
 - **Flexível**: Seleção de shards e modelos via CLI ou arquivo YAML
 - **Dashboard Multipáginas**: Interface Streamlit com múltiplas páginas (Home + Análises Avançadas)
-- **Sistema de Cores Avançado**: ColorManager para personalização de cores por modelo
+- **Sistema de Cores Avançado**: ColorManager + ColorUtils + Palettes para personalização de cores
 - **Logging estruturado**: Rastreamento detalhado de execução com timestamps
 - **Métricas abrangentes**: Análise de confiança, overlap palavra-contexto, concordância entre modelos
 - **Tamanho de Querys**: Métricas de tamanho médio por palavra e por letra
@@ -137,6 +137,22 @@ flowchart TB
   - `DistilBERTModel`: modelo leve baseado em BERT
   - `RobertaModel`: modelo mais robusto
   - `BERTModel`: BERT completo (Option A - large version)
+
+#### 7. **ColorManager** (`src/color_manager.py`)
+- Gerenciador centralizado de cores para visualizações
+- Suporte a múltiplas paletas (Default, Pastel, Vibrant, Professional, Monochrome, Colorblind)
+- Mode de acessibilidade (alto contraste)
+- Cores dinâmicas baseadas em performance
+- Paletas personalizadas
+
+#### 8. **ColorUtils** (`src/color_utils.py`)
+- Utilitários para manipulação de cores
+- Funções auxiliares para conversão e ajuste de cores
+- Geração de cores a partir de valores numéricos
+
+#### 9. **Palettes** (`src/palettes.py`)
+- Paletas de cores predefinidas
+- Categorias especializadas (por modelo, por risco, etc.)
 
 ---
 
@@ -523,7 +539,7 @@ Resposta: "JavaScript é melhor"
 ## 🚀 Instalação
 
 ### Pré-requisitos
-- Python ≥ 3.8.1
+- Python ≥ 3.10
 - Poetry ≥ 1.2
 
 ### Passos
@@ -770,18 +786,79 @@ poetry run pytest tests/test_color_system_simple.py -v
 | Pacote | Versão | Uso |
 |--------|--------|-----|
 | pandas | ≥1.3 | Manipulação de dados |
-| transformers | ≥4.20 | Modelos HF QA |
-| torch | ≥1.10 | Backend de ML |
-| streamlit | ≥1.20 | Dashboard web interativo |
-| plotly | ≥5.0 | Visualizações interativas |
-| pyyaml | ≥5.4 | Configuração |
-| tqdm | ≥4.60 | Barras de progresso |
-| huggingface-hub | ≥0.12 | Autenticação HF |
+| numpy | ≥1.24 | Operações numéricas |
+| transformers | ≥4.30 | Modelos HF QA |
+| torch | ≥2.0 | Backend de ML |
+| streamlit | ≥1.30 | Dashboard web interativo |
+| plotly | ≥5.20 | Visualizações interativas |
+| altair | ≥5.0 | Visualizações alternativas |
+| pyyaml | ≥6.0 | Configuração |
+| tqdm | ≥4.0 | Barras de progresso |
+| scikit-learn | ≥1.3 | Métricas e estatísticas |
+| python-dotenv | ≥1.0 | Variáveis de ambiente |
+| pyarrow | ≥11.0 | Formato de dados (CSV.gz) |
+
+### Dependências Opcionais (importadas se disponíveis)
+
+| Pacote | Uso |
+|--------|-----|
+| matplotlib | Visualizações alternativas |
+| seaborn | Gráficos estatísticos |
 
 ---
 
 ## 📋 Estrutura de Projeto
 
+```
+dashboard_pln/
+├── app.py                         # Dashboard Streamlit (página principal)
+├── pages/
+│   ├── __init__.py
+│   └── 01_analises_avancadas.py  # Dashboard Streamlit (análises avançadas)
+├── src/
+│   ├── __init__.py
+│   ├── base_model.py              # Classe abstrata
+│   ├── data_loader.py             # Carregador de shards
+│   ├── logger_config.py           # Logging
+│   ├── main.py                    # Entrada CLI
+│   ├── metrics_calculator.py      # Cálculo de métricas
+│   ├── model_selector.py          # Registro de modelos
+│   ├── parallel_processor.py      # Processamento paralelo (batch otimizado)
+│   ├── pipeline_controller.py     # Orquestrador
+│   ├── color_manager.py           # Gerenciador de cores
+│   ├── color_utils.py             # Utilitários para cores
+│   ├── palettes.py                # Paletas de cores predefinidas
+│   └── models/
+│       ├── __init__.py
+│       ├── distilbert_model.py    # Wrapper DistilBERT
+│       ├── roberta_model.py       # Wrapper RoBERTa
+│       └── bert_model.py          # Wrapper BERT
+├── tests/
+│   ├── __init__.py
+│   ├── test_color_system.py
+│   ├── test_color_system_simple.py
+│   ├── test_data_loader.py
+│   ├── test_model_selector.py
+│   └── test_metrics_overlap.py
+├── data/
+│   └── shards/                    # Arquivos CSV de entrada
+│       ├── shard_000.csv
+│       ├── shard_001.csv
+│       └── ...
+├── config/
+│   └── pipeline_config.yaml       # Configuração YAML
+├── logs/                          # Saídas de log
+├── outputs/                       # Resultados
+│   └── 20260202_123045/
+│       ├── results_consolidated.csv   # ou .csv.gz
+│       ├── metrics.json
+│       ├── metrics_summary.md
+│       └── per_model_metrics.csv
+├── .env                           # Variáveis de ambiente
+├── pyproject.toml                 # Dependências Poetry
+├── README.md                      # Este arquivo
+├── COLOR_SYSTEM_IMPLEMENTATION.md # Documentação do sistema de cores
+└── projeto_av02_pln_lucas_cavalcante.ipynb  # Notebook de análise
 ```
 dashboard_pln/
 ├── app.py                         # Dashboard Streamlit (página principal)
