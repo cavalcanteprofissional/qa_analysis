@@ -303,9 +303,14 @@ O dashboard é organizado em múltiplas páginas:
 - **Filtros Interativos**: Score mínimo, overlap mínimo, seleção de modelos, busca por palavra-chave
 - **Métricas em Tempo Real**: Exibição de médias e totais
 - **Comparações entre Modelos**: Visualização de desempenho relativo
-- **Sistema de Cores**: ColorManager para personalização de cores por modelo
+- **Sistema de Cores Avançado**: ColorManager com paletas personalizáveis
+  - Seleção de paleta (Default, Pastel, Vibrant, Professional, Monochrome, Colorblind)
+  - Cores personalizadas por modelo com color picker
+  - Modo de Performance (cores baseadas em desempenho: verde=alto, vermelho=baixo)
+  - Modo de Acessibilidade (alto contraste)
+  - Criação e salvamento de paletas personalizadas
 - **Identificação de Outliers**: Top 10 e Bottom 10 por score (filtrado pelo modelo com maior overlap)
-- **Análise de Divergências**: Exemplos onde modelos dão respostas diferentes
+- **Análise de Divergências**: 5 exemplos selecionados com respostas de todos os modelos lado a lado
 - **Visualização de Tabelas**: Tabela filtrada com todos os dados
 - **Data de Execução**: Exibição dinâmica da data do CSV carregado
 
@@ -346,23 +351,71 @@ poetry run streamlit run app.py
 - **Modelos**: Seleção múltipla de modelos para comparar
 - **Busca por palavra-chave**: Procura termos em perguntas ou respostas
 
+#### Exemplos Destacados
+
+**Top/Bottom 10 por Score**
+- Seleciona o modelo com maior overlap médio como referência
+- Exibe os 10 exemplos de maior e menor score desse modelo
+- Útil para identificar casos de alta confiança e problemas potenciais
+
+**Exemplos com Respostas de Todos os Modelos**
+- Seleciona 5 exemplos mostrando respostas de todos os modelos lado a lado
+- Permite comparação direta de comportamento entre modelos
+- Exibe pergunta, contexto, resposta, score e overlap de cada modelo
+
 ### Componentes do Dashboard (Análises Avançadas)
 
 #### Violin Plot
 - Distribuição de Scores por modelo
+- Inclui box plot e pontos individuais
+- Estatísticas descritivas (média, mediana, std, min, max, quartis)
 
 #### Scatter Plots
-- Tamanho da Pergunta vs Score
-- **Score vs Overlap**: Correlação com linha de tendência e estatísticas
+- **Tamanho da Pergunta vs Score**: Correlação entre comprimento da pergunta e confiança
+- **Score vs Overlap**: Correlação entre confiança e sobreposição palavra-contexto
+- Linha de tendência OLS (Ordinary Least Squares)
+- Coeficiente de correlação exibido no gráfico
+
+#### Histograma de Overlap
+- Distribuição de overlap com marginal box plot
+- Linha tracejada indicando a média
 
 #### Matriz de Correlação
 - Heatmap mostrando correlações entre todas as métricas numéricas
+- Valores de correlação exibidos nas células
+- Classificação por força (forte/moderada/fraca) e direção (positiva/negativa)
+- Download da matriz em formato CSV
 
 ### Análises Detalhadas
 
 - **Top/Bottom 10**: Melhores e piores exemplos por score (filtrado pelo modelo com maior overlap médio)
-- **Respostas Divergentes**: Casos onde modelos discordam na mesma pergunta
+- **Exemplos com Respostas de Todos os Modelos**: 5 exemplos selecionados mostrando divergências entre modelos
 - **Tabela Filtrada**: Visualização completa dos dados filtrados
+
+### Lógica de Seleção dos Exemplos
+
+A seleção dos 5 exemplos de divergência segue uma hierarquia de prioridade:
+
+1. **Exclusão prévia**: Linhas presentes nos Top 10 e Bottom 10 são excluídas para evitar repetição
+
+2. **Classificação de Discordância**: Cada exemplo (pergunta + contexto) é classificado:
+   - `full_disagreement`: Todos os modelos dão respostas **diferentes**
+   - `partial_disagreement`: Alguns modelos concordam, mas não todos
+   - `no_disagreement`: Todos os modelos dão a mesma resposta
+   - `insufficient_models`: Menos de 2 modelos disponíveis
+
+3. **Seleção em camadas**:
+   - **Primeira camada**: Tenta selecionar até 5 exemplos de `full_disagreement`
+   - **Segunda camada**: Se ainda faltam exemplos, complementa com `partial_disagreement`
+   - Usa `random_state=42` para reprodutibilidade
+   - Faz shuffle no final para misturar os tipos
+
+4. **Exibição**: Cada exemplo mostra:
+   - Pergunta e contexto
+   - Respostas de todos os modelos lado a lado em colunas
+   - Score e overlap de cada modelo
+
+Essa abordagem permite identificar rapidamente casos problemáticos onde os modelos QA discordam entre si, facilitando a análise comparativa de desempenho.
 
 ### Estrutura de Dados para o Dashboard
 
@@ -393,8 +446,9 @@ O dashboard mapeia automaticamente diferentes nomes de colunas para os campos es
 
 #### Análise Comparativa
 1. Selecione múltiplos modelos para comparar desempenho
-2. Visualize "Respostas Divergentes" para entender diferenças entre modelos
+2. Visualize os "Exemplos com Respostas de Todos os Modelos" para entender diferenças entre modelos
 3. Compare o tamanho médio das perguntas por modelo
+4. Use a matriz de correlação nas Análises Avançadas para entender relações entre métricas
 
 ---
 
@@ -942,17 +996,23 @@ rm logs/qa_pipeline_*.log
 
 ---
 
-## 📞 Contato & Suporte
+**Última atualização:** Fevereiro 14, 2026
+**Versão da Pipeline:** 2.2 (com dashboard multipáginas e batch processing otimizado)
 
-Para dúvidas ou issues, abra uma issue no repositório ou entre em contato com a equipe de desenvolvimento.
+---
+
+## 👤 Desenvolvedor
+
+**Lucas Cavalcante** - Data Analyst & AI/ML Specialist
+
+- 📧 **Email:** [cavalcanteprofissional@outlook.com](mailto:cavalcanteprofissional@outlook.com)
+- 💻 **GitHub:** [github.com/cavalcanteprofissional](https://github.com/cavalcanteprofissional)
+- 🔗 **LinkedIn:** [linkedin.com/in/cavalcante-lucas](https://linkedin.com/in/cavalcante-lucas)
+- 🌐 **Portfolio:** [cavalcanteprofissional.github.io](https://cavalcanteprofissional.github.io/cavalcanteprofissional/)
+- 📄 **Lattes:** [lattes.cnpq.br/7686247677030579](http://lattes.cnpq.br/7686247677030579)
 
 ---
 
 ## 📝 Licença
 
 Este projeto está disponível sob a licença MIT. Veja `LICENSE` para detalhes.
-
----
-
-**Última atualização:** Fevereiro 14, 2026
-**Versão da Pipeline:** 2.2 (com dashboard multipáginas e batch processing otimizado)
