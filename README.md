@@ -913,57 +913,6 @@ qa_analysis/
     ├── test_model_selector.py
     └── test_metrics_overlap.py
 ```
-dashboard_pln/
-├── app.py                         # Dashboard Streamlit (página principal)
-├── pages/
-│   ├── __init__.py
-│   └── 01_analises_avancadas.py  # Dashboard Streamlit (análises avançadas)
-├── src/
-│   ├── __init__.py
-│   ├── base_model.py              # Classe abstrata
-│   ├── data_loader.py             # Carregador de shards
-│   ├── logger_config.py           # Logging
-│   ├── main.py                    # Entrada CLI
-│   ├── metrics_calculator.py      # Cálculo de métricas
-│   ├── model_selector.py          # Registro de modelos
-│   ├── parallel_processor.py      # Processamento paralelo (batch otimizado)
-│   ├── pipeline_controller.py     # Orquestrador
-│   ├── color_manager.py           # Gerenciador de cores
-│   ├── color_utils.py             # Utilitários para cores
-│   ├── palettes.py                # Paletas de cores predefinidas
-│   └── models/
-│       ├── __init__.py
-│       ├── distilbert_model.py    # Wrapper DistilBERT
-│       ├── roberta_model.py       # Wrapper RoBERTa
-│       └── bert_model.py          # Wrapper BERT
-├── tests/
-│   ├── __init__.py
-│   ├── test_color_system.py
-│   ├── test_color_system_simple.py
-│   ├── test_data_loader.py
-│   ├── test_model_selector.py
-│   └── test_metrics_overlap.py
-├── data/
-│   └── shards/                    # Arquivos CSV de entrada
-│       ├── shard_000.csv
-│       ├── shard_001.csv
-│       └── ...
-├── config/
-│   └── pipeline_config.yaml       # Configuração YAML
-├── logs/                          # Saídas de log
-├── outputs/                       # Resultados
-│   └── 20260202_123045/
-│       ├── results_consolidated.csv   # ou .csv.gz
-│       ├── metrics.json
-│       ├── metrics_summary.md
-│       └── per_model_metrics.csv
-├── .env                           # Variáveis de ambiente
-├── pyproject.toml                 # Dependências Poetry
-├── README.md                      # Este arquivo
-├── COLOR_SYSTEM_IMPLEMENTATION.md # Documentação do sistema de cores
-└── projeto_av02_pln_lucas_cavalcante.ipynb  # Notebook de análise
-```
-
 ---
 
 ## 🐛 Troubleshooting
