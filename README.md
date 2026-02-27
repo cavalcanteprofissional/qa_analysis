@@ -864,6 +864,55 @@ poetry run pytest tests/test_color_system_simple.py -v
 ## 📋 Estrutura de Projeto
 
 ```
+qa_analysis/
+├── .devcontainer/           # Configuração Dev Container
+├── .gitignore
+├── app.py                   # Dashboard Streamlit (página principal)
+├── COLOR_SYSTEM_IMPLEMENTATION.md
+├── LICENSE
+├── poetry.lock
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── config/
+│   └── settings.py          # Configurações Python
+├── data/
+│   └── shards/              # Arquivos CSV de entrada
+├── jupyter/
+│   └── projeto_av02_pln_lucas_cavalcante.ipynb
+├── logs/
+├── outputs/
+├── pages/
+│   ├── __init__.py
+│   └── 01_analises_avancadas.py
+├── scripts/
+│   └── run_examples.sh
+├── src/
+│   ├── __init__.py
+│   ├── base_model.py
+│   ├── color_manager.py
+│   ├── color_utils.py
+│   ├── data_loader.py
+│   ├── logger_config.py
+│   ├── main.py
+│   ├── metrics_calculator.py
+│   ├── model_selector.py
+│   ├── palettes.py
+│   ├── parallel_processor.py
+│   └── pipeline_controller.py
+│   └── models/
+│       ├── __init__.py
+│       ├── bert_model.py
+│       ├── distilbert_model.py
+│       └── roberta_model.py
+└── tests/
+    ├── __init__.py
+    ├── test_color_system.py
+    ├── test_color_system_simple.py
+    ├── test_data_loader.py
+    ├── test_model_selector.py
+    └── test_metrics_overlap.py
+```
 dashboard_pln/
 ├── app.py                         # Dashboard Streamlit (página principal)
 ├── pages/
@@ -914,51 +963,6 @@ dashboard_pln/
 ├── COLOR_SYSTEM_IMPLEMENTATION.md # Documentação do sistema de cores
 └── projeto_av02_pln_lucas_cavalcante.ipynb  # Notebook de análise
 ```
-dashboard_pln/
-├── app.py                         # Dashboard Streamlit (página principal)
-├── pages/
-│   ├── __init__.py
-│   └── 01_analises_avancadas.py  # Dashboard Streamlit (análises avançadas)
-├── src/
-│   ├── __init__.py
-│   ├── base_model.py              # Classe abstrata
-│   ├── data_loader.py             # Carregador de shards
-│   ├── logger_config.py           # Logging
-│   ├── main.py                    # Entrada CLI
-│   ├── metrics_calculator.py      # Cálculo de métricas
-│   ├── model_selector.py          # Registro de modelos
-│   ├── parallel_processor.py      # Processamento paralelo (batch otimizado)
-│   ├── pipeline_controller.py     # Orquestrador
-│   ├── color_manager.py           # Gerenciador de cores
-│   └── models/
-│       ├── __init__.py
-│       ├── distilbert_model.py    # Wrapper DistilBERT
-│       ├── roberta_model.py       # Wrapper RoBERTa
-│       └── bert_model.py          # Wrapper BERT
-├── tests/
-│   ├── test_color_system.py
-│   ├── test_color_system_simple.py
-│   ├── test_data_loader.py
-│   ├── test_model_selector.py
-│   └── test_metrics_overlap.py
-├── data/
-│   └── shards/                    # Arquivos CSV de entrada
-│       ├── shard_000.csv
-│       ├── shard_001.csv
-│       └── ...
-├── config/
-│   └── pipeline_config.yaml       # Configuração YAML
-├── logs/                          # Saídas de log
-├── outputs/                       # Resultados
-│   └── 20260202_123045/
-│       ├── results_consolidated.csv   # ou .csv.gz
-│       ├── metrics.json
-│       ├── metrics_summary.md
-│       └── per_model_metrics.csv
-├── .env                           # Variáveis de ambiente
-├── pyproject.toml                 # Dependências Poetry
-├── README.md                      # Este arquivo
-└── projeto_av02_pln_lucas_cavalcante.ipynb  # Notebook de análise
 
 ---
 
@@ -969,6 +973,8 @@ dashboard_pln/
 **Solução:** Execute pelo Poetry:
 ```bash
 poetry run python -m src.main ...
+# ou
+poetry run streamlit run app.py
 ```
 
 ### Erro: "CUDA out of memory"
